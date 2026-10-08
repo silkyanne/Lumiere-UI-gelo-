@@ -9,7 +9,6 @@ export const VALID_ROUTES = new Set<Route>([
   'registry',
   'logs',
   'security-audit',
-  'rbac',
   'damage',
   'replenishment',
   'production',

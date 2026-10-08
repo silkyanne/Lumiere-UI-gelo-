@@ -26,7 +26,6 @@ const TempPasswordResetScreen = lazy(() => import('@/pages/TempPasswordResetScre
 
 // Code-split heavy subpages for feature-level chunking
 const AdminSecurityAuditPage = lazy(() => import('@/pages/AdminSecurityAuditPage').then((m) => ({ default: m.AdminSecurityAuditPage })))
-const AdminRolesPage = lazy(() => import('@/pages/AdminRolesPage').then((m) => ({ default: m.AdminRolesPage })))
 const EventDashboardPage = lazy(() => import('@/pages/EventDashboardPage').then((m) => ({ default: m.EventDashboardPage })))
 const EventRegistryPage = lazy(() => import('@/pages/EventRegistryPage').then((m) => ({ default: m.EventRegistryPage })))
 const ReplenishmentPage = lazy(() => import('@/pages/ReplenishmentPage').then((m) => ({ default: m.ReplenishmentPage })))
@@ -282,8 +281,6 @@ function Router() {
       return <AdminWorkforcePage />
     case 'security-audit':
       return <AdminSecurityAuditPage />
-    case 'rbac':
-      return <AdminRolesPage />
     case 'overview':
     default:
       // Role-aware home. Admins always land on the icon-rail System Dashboard —

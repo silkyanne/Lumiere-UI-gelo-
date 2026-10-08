@@ -5,7 +5,7 @@ import { usePortal } from '@/lib/store'
 import { useNav } from '@/lib/nav'
 import { useClickFlash } from '@/lib/use-click-flash'
 import { AdminShell } from '@/components/admin/AdminShell'
-import { AdminPendingActions, type PendingSubRoleSetup } from '@/components/admin/AdminPendingActions'
+import { AdminPendingActions } from '@/components/admin/AdminPendingActions'
 import { AdminSecurityFeed } from '@/components/admin/AdminSecurityFeed'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { UserDistributionCard } from '@/components/admin/AdminAnalytics'
@@ -182,7 +182,7 @@ function DashboardDetailModal({
 
 export function AdminSystemDashboardPage() {
   const { navigate } = useNav()
-  const { staff, logs, userActions, resolveUserAction, pendingSubRoleSetups, isBackendConnected } = usePortal()
+  const { staff, logs, userActions, resolveUserAction, isBackendConnected } = usePortal()
   const [activeId, setActiveId] = useState<AdminDestinationId>('system-dashboard')
   const [drillDownCategory, setDrillDownCategory] = useState<string | null>(null)
   // Pending-action confirmation state. The action is applied ONLY when the
@@ -268,14 +268,6 @@ export function AdminSystemDashboardPage() {
     setConfirmItem(item)
   }
 
-  // pendingSubRoleSetups comes straight from usePortal() — store.tsx is the
-  // single source of truth for which sub-roles still need their permission
-  // table saved (see isPermissionsConfigured in lib/rbac.ts). Don't recompute
-  // it here; that would create a second, driftable copy of the same logic.
-  const handleConfigureSubRole = (setup: PendingSubRoleSetup) => {
-    navigate('rbac', { kind: 'configure-subrole', payload: { subRoleId: setup.subRoleId } })
-  }
-
   const isLocked = confirmItem?.type === 'account-locked'
 
   const [isLoading] = useState(false)
@@ -306,7 +298,6 @@ export function AdminSystemDashboardPage() {
         if (destination) {
           if (id === 'workforce') navigate('workforce')
           else if (id === 'security-audit') navigate('security-audit')
-          else if (id === 'rbac') navigate('rbac')
           else setActiveId(id)
         }
       }}
@@ -370,8 +361,7 @@ export function AdminSystemDashboardPage() {
             <AdminPendingActions
               items={pendingItems}
               onResolve={handleResolve}
-              subRoleSetups={pendingSubRoleSetups}
-              onConfigureSubRole={handleConfigureSubRole}
+
             />
           </div>
         </div>

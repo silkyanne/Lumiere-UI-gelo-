@@ -9,7 +9,6 @@ import {
   Sun,
   Moon,
   ChevronRight,
-  ShieldCheck,
   ScrollText,
   Palette,
 } from 'lucide-react'
@@ -33,7 +32,6 @@ type NavItem = {
 const adminNavItems: NavItem[] = [
   { label: 'System Dashboard', blurb: 'Overall system performance & metrics', icon: LayoutGrid, route: 'overview' },
   { label: 'Workforce Management', blurb: 'Manage users, roles & accounts', icon: Users, route: 'workforce' },
-  { label: 'Roles & Access', blurb: 'Configure top-level access permissions', icon: ShieldCheck, route: 'rbac' },
   { label: 'Security Audit Logs', blurb: 'Review security events & system audit trail', icon: ScrollText, route: 'security-audit' },
 ]
 

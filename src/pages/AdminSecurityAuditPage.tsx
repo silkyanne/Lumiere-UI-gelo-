@@ -91,7 +91,7 @@ export function AdminSecurityAuditPage() {
   }
 
   const resetFilters = () => { setQuery(''); setAccount('All'); setStatus('All'); setFromDate(''); setToDate(''); setExpanded(null) }
-  const railSelect = (id: AdminDestinationId) => { if (id === 'system-dashboard') navigate('overview'); else if (id === 'workforce') navigate('workforce'); else if (id === 'security-audit') setExpanded(null); else if (id === 'rbac') navigate('rbac') }
+  const railSelect = (id: AdminDestinationId) => { if (id === 'system-dashboard') navigate('overview'); else if (id === 'workforce') navigate('workforce'); else if (id === 'security-audit') setExpanded(null) }
   const handleRefetch = async () => { setIsError(false); setIsLoading(true); try { await new Promise((resolve) => setTimeout(resolve, 200)) } catch { setIsError(true) } finally { setIsLoading(false) } }
   useEffect(() => { handleRefetch() }, [])
   useEffect(() => { if (expanded && !rows.some((entry) => entry.id === expanded)) setExpanded(null) }, [rows, expanded])
