@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { CalendarClock, ChevronLeft, ChevronRight, Search, Sparkles } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { CalendarClock, ChevronLeft, ChevronRight, Search, Sparkles, X } from 'lucide-react'
 import { ExecutiveShell } from '@/components/executive/ExecutiveShell'
 import { ExecutiveLiteDashboard } from '@/components/executive-lite/ExecutiveLiteDashboard'
 import { usePortal } from '@/lib/store'
@@ -21,8 +21,16 @@ function ExecutiveDashboard() {
   const [viewMonth, setViewMonth] = useState(() => new Date())
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [calendarOpen, setCalendarOpen] = useState(false)
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null)
 
   const monthLabel = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(viewMonth)
+  useEffect(() => {
+    if (!calendarOpen && !selectedEventId) return
+    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') { setCalendarOpen(false); setSelectedEventId(null) } }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [calendarOpen, selectedEventId])
   const monthEvents = useMemo(() => events.filter((event) => {
     const date = new Date(event.targetDate)
     return date.getMonth() === viewMonth.getMonth() && date.getFullYear() === viewMonth.getFullYear()
@@ -45,13 +53,21 @@ function ExecutiveDashboard() {
     setViewMonth((current) => new Date(current.getFullYear(), current.getMonth() + amount, 1))
     setSelectedDate(null)
   }
+  const selectedEvent = selectedEventId ? events.find((event) => event.id === selectedEventId) ?? null : null
+  const openEvent = (id: string) => setSelectedEventId(id)
+  const destination = (id: ExecutiveDestinationId) => navigate(id)
+  const chooseDate = (date: Date) => {
+    setViewMonth(new Date(date.getFullYear(), date.getMonth(), 1))
+    setSelectedDate(keyFor(date))
+    setCalendarOpen(false)
+  }
+  const shiftCalendarMonth = (amount: number) => setViewMonth((current) => new Date(current.getFullYear(), current.getMonth() + amount, 1))
   const resetMonth = () => {
     const now = new Date()
     setViewMonth(new Date(now.getFullYear(), now.getMonth(), 1))
     setSelectedDate(null)
+    setCalendarOpen(false)
   }
-  const openEvent = (id: string) => navigate('event-detail', { kind: 'view-event', payload: { id } })
-  const destination = (id: ExecutiveDestinationId) => navigate(id)
 
   return (
     <ExecutiveShell activeId="dashboard" onSelect={destination} stickyHeader={
@@ -64,15 +80,36 @@ function ExecutiveDashboard() {
         <div className="space-y-5">
           <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
             <div className="mb-5 flex items-center justify-between"><div className="flex items-center gap-2"><CalendarClock className="size-4 text-primary" /><h2 className="text-xs font-bold uppercase tracking-[0.14em]">Booking Calendar</h2></div><button type="button" onClick={resetMonth} className="rounded-md border border-border px-2 py-1 text-[0.6rem] font-semibold uppercase tracking-wider text-muted-foreground hover:bg-muted">Current Month</button></div>
-            <div className="mb-4 flex items-center justify-between"><button type="button" aria-label="Previous month" onClick={() => moveMonth(-1)} className="flex size-8 items-center justify-center rounded-md border border-border hover:bg-muted"><ChevronLeft className="size-4" /></button><span className="font-serif text-base font-medium">{monthLabel}</span><button type="button" aria-label="Next month" onClick={() => moveMonth(1)} className="flex size-8 items-center justify-center rounded-md border border-border hover:bg-muted"><ChevronRight className="size-4" /></button></div>
+            <div className="mb-4 flex items-center justify-between"><button type="button" aria-label="Previous month" onClick={() => moveMonth(-1)} className="flex size-8 items-center justify-center rounded-md border border-border hover:bg-muted"><ChevronLeft className="size-4" /></button><button type="button" onClick={() => setCalendarOpen(true)} className="rounded-md px-2 py-1 font-serif text-base font-medium underline-offset-4 hover:bg-muted hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={`Open full booking calendar for ${monthLabel}`}>{monthLabel}</button><button type="button" aria-label="Next month" onClick={() => moveMonth(1)} className="flex size-8 items-center justify-center rounded-md border border-border hover:bg-muted"><ChevronRight className="size-4" /></button></div>
             <div className="grid grid-cols-7 gap-1 text-center text-[0.58rem] font-bold uppercase tracking-wider text-muted-foreground">{['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((day) => <span key={day}>{day}</span>)}</div>
-            <div className="mt-2 grid grid-cols-7 gap-1">{days.map((day, index) => { if (!day) return <span key={`empty-${index}`} />; const date = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), day); const key = keyFor(date); const selected = selectedDate === key; const booked = bookedDates.has(key); return <button key={key} type="button" aria-label={`${monthLabel} ${day}${booked ? ', booked' : ''}`} onClick={() => setSelectedDate(selected ? null : key)} className={cn('relative flex aspect-square items-center justify-center rounded-md text-xs transition-colors hover:bg-muted', selected && 'bg-primary text-primary-foreground', !selected && booked && 'bg-primary/15 text-primary')}>{day}{booked && <span className={cn('absolute bottom-1 size-1 rounded-full bg-primary', selected && 'bg-primary-foreground')} />}</button> })}</div>
+            <div className="mt-2 grid grid-cols-7 gap-1">{days.map((day, index) => { if (!day) return <span key={`empty-${index}`} />; const date = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), day); const key = keyFor(date); const selected = selectedDate === key; const booked = bookedDates.has(key); return <button key={key} type="button" aria-label={`${monthLabel} ${day}${booked ? ', booked' : ''}`} onClick={() => chooseDate(date)} className={cn('relative flex aspect-square items-center justify-center rounded-md text-xs transition-colors hover:bg-muted', selected && 'bg-primary text-primary-foreground', !selected && booked && 'bg-primary/15 text-primary')}>{day}{booked && <span className={cn('absolute bottom-1 size-1 rounded-full bg-primary', selected && 'bg-primary-foreground')} />}</button> })}</div>
             <div className="mt-5 flex items-center gap-4 border-t border-border pt-3 text-[0.62rem] text-muted-foreground"><span className="flex items-center gap-1.5"><i className="size-1.5 rounded-full bg-primary" />Booked</span><span className="flex items-center gap-1.5"><i className="size-1.5 rounded-full bg-foreground" />Selected</span></div>
           </section>
           <section className="rounded-xl border border-border bg-card p-4 shadow-sm"><div className="mb-3 flex items-center justify-between"><h2 className="text-[0.62rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">{monthLabel} Summary</h2><span className="rounded-full bg-primary/10 px-2 py-1 text-[0.6rem] font-semibold text-primary">{monthEvents.length} Events</span></div>{monthEvents.length === 0 ? <p className="py-5 text-xs text-muted-foreground">No events scheduled for this month.</p> : <div className="max-h-64 space-y-3 overflow-y-auto">{monthEvents.map((event) => <button key={event.id} type="button" onClick={() => openEvent(event.id)} className="flex w-full items-center gap-3 text-left"><span className="w-8 shrink-0 rounded border border-border px-1 py-1 text-center text-[0.55rem] font-semibold leading-tight"><b className="block text-primary">{formatMonth(event.targetDate)}</b>{new Date(event.targetDate).getDate()}</span><span className="min-w-0 flex-1 truncate text-xs font-medium">{event.title}</span><span className="max-w-24 truncate text-right text-[0.58rem] font-semibold uppercase tracking-wide text-muted-foreground">{event.status}</span></button>)}</div>}</section>
         </div>
         <section className="min-w-0"><div className="mb-4 rounded-xl border border-border bg-card px-4 py-4"><div className="flex items-center gap-2"><h2 className="font-serif text-xl font-medium">{monthLabel} Events</h2><span className="rounded-full bg-primary/10 px-2 py-0.5 text-[0.65rem] font-semibold text-primary">{filteredEvents.length}</span></div><p className="mt-1 text-xs text-muted-foreground">All active and scheduled events for {monthLabel}.</p></div>{filteredEvents.length === 0 ? <div className="rounded-xl border border-dashed border-border px-6 py-12 text-center text-sm text-muted-foreground">No events scheduled for this {selectedDate ? 'date' : 'month'}.</div> : <div className="space-y-3">{filteredEvents.map((event) => <article key={event.id} className="flex flex-col gap-4 rounded-xl border border-border bg-card p-4 shadow-sm sm:flex-row sm:items-center"><div className="flex items-center gap-3 sm:w-24 sm:shrink-0"><span className="w-11 rounded border border-border px-1 py-1.5 text-center text-[0.55rem] font-semibold leading-tight"><b className="block text-primary">{formatMonth(event.targetDate)}</b><strong className="block text-base text-foreground">{new Date(event.targetDate).getDate()}</strong><span>{formatWeekday(event.targetDate)}</span></span><span className="text-[0.62rem] font-mono text-muted-foreground sm:hidden">{event.refId}</span></div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><span className="hidden text-[0.62rem] font-mono text-muted-foreground sm:inline">{event.refId}</span><span className="rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[0.58rem] font-semibold uppercase tracking-wide text-primary">{event.status}</span></div><h3 className="mt-1 truncate font-serif text-base font-medium">{event.title}</h3><p className="mt-1 truncate text-xs text-muted-foreground">{event.client} <span className="mx-1">•</span> {event.venue} <span className="mx-1">•</span> {formatDate(event.targetDate)}</p></div><button type="button" onClick={() => openEvent(event.id)} className="self-start rounded-md border border-primary/50 px-4 py-2 text-[0.65rem] font-bold uppercase tracking-wider text-primary hover:bg-primary hover:text-primary-foreground sm:self-center">View</button></article>)}</div>}</section>
       </div>}
+      {calendarOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setCalendarOpen(false) }}>
+          <section role="dialog" aria-modal="true" aria-labelledby="booking-calendar-title" className="max-h-[min(90vh,46rem)] w-full max-w-2xl overflow-y-auto rounded-2xl border border-border bg-card p-5 shadow-2xl sm:p-7">
+            <div className="flex items-start justify-between gap-4"><div><p className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-primary">Executive Dashboard</p><h2 id="booking-calendar-title" className="mt-1 font-serif text-2xl font-medium">Booking Calendar</h2></div><button type="button" aria-label="Close booking calendar" onClick={() => setCalendarOpen(false)} className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><X className="size-5" /></button></div>
+            <div className="mt-7 flex items-center justify-between"><button type="button" aria-label="Previous month" onClick={() => shiftCalendarMonth(-1)} className="flex size-9 items-center justify-center rounded-md border border-border hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><ChevronLeft className="size-4" /></button><h3 className="font-serif text-xl font-medium">{monthLabel}</h3><button type="button" aria-label="Next month" onClick={() => shiftCalendarMonth(1)} className="flex size-9 items-center justify-center rounded-md border border-border hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><ChevronRight className="size-4" /></button></div>
+            <div className="mt-6 grid grid-cols-7 gap-2 text-center text-[0.62rem] font-bold uppercase tracking-wider text-muted-foreground">{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => <span key={day}>{day}</span>)}</div>
+            <div className="mt-3 grid grid-cols-7 gap-2">{days.map((day, index) => { if (!day) return <span key={`modal-empty-${index}`} />; const date = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), day); const key = keyFor(date); const selected = selectedDate === key; const booked = bookedDates.has(key); return <button key={key} type="button" aria-label={`${monthLabel} ${day}${booked ? ', booked' : ''}`} onClick={() => chooseDate(date)} className={cn('relative flex min-h-11 items-center justify-center rounded-lg border border-transparent text-sm hover:border-primary/40 hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring', selected && 'bg-primary text-primary-foreground', !selected && booked && 'border-primary/30 bg-primary/10 text-primary')}>{day}{booked && <span className={cn('absolute bottom-2 size-1.5 rounded-full bg-primary', selected && 'bg-primary-foreground')} />}</button> })}</div>
+            <div className="mt-7 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4"><div className="flex items-center gap-4 text-xs text-muted-foreground"><span className="flex items-center gap-2"><i className="size-2 rounded-full bg-primary" />Booked</span><span className="flex items-center gap-2"><i className="size-2 rounded-full bg-foreground" />Selected</span></div><button type="button" onClick={resetMonth} className="rounded-md border border-border px-3 py-2 text-xs font-semibold uppercase tracking-wider hover:bg-muted">Current Month</button></div>
+          </section>
+        </div>
+      )}
+      {selectedEvent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setSelectedEventId(null) }}>
+          <section role="dialog" aria-modal="true" aria-labelledby="event-details-title" className="max-h-[min(90vh,42rem)] w-full max-w-xl overflow-y-auto rounded-2xl border border-border bg-card p-5 shadow-2xl sm:p-7">
+            <div className="flex items-start justify-between gap-4"><div><p className="text-[0.62rem] font-bold uppercase tracking-[0.16em] text-primary">Read-only event details</p><h2 id="event-details-title" className="mt-1 font-serif text-2xl font-medium">{selectedEvent.title}</h2></div><button type="button" aria-label="Close event details" onClick={() => setSelectedEventId(null)} className="rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><X className="size-5" /></button></div>
+            <div className="mt-6 flex flex-wrap items-center gap-2"><span className="rounded-full border border-primary/40 bg-primary/10 px-2.5 py-1 text-[0.62rem] font-semibold uppercase tracking-wide text-primary">{selectedEvent.status}</span><span className="font-mono text-xs text-muted-foreground">{selectedEvent.refId}</span></div>
+            <dl className="mt-6 grid gap-4 sm:grid-cols-2">{[['Client', selectedEvent.client], ['Venue', selectedEvent.venue], ['Event Date', formatDate(selectedEvent.targetDate)], ['Start Time', selectedEvent.eventStart || selectedEvent.installationStart], ['End Time', selectedEvent.eventEnd || selectedEvent.installationEnd]].map(([label, value]) => <div key={label} className="rounded-lg border border-border bg-background/40 p-3"><dt className="text-[0.6rem] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</dt><dd className="mt-1 text-sm font-medium text-foreground">{value}</dd></div>)}</dl>
+            <div className="mt-7 flex justify-end border-t border-border pt-4"><button type="button" onClick={() => setSelectedEventId(null)} className="rounded-md border border-border px-4 py-2 text-xs font-semibold uppercase tracking-wider hover:bg-muted">Close</button></div>
+          </section>
+        </div>
+      )}
     </ExecutiveShell>
   )
 }
